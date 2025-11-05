@@ -40,7 +40,9 @@ export class ArticleController {
   @ApiResponse({ status: 201, description: 'The article has been successfully created.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Post()
-  async create(@User('id') userId: number, @Body('article') articleData: CreateArticleDto) {
+  async create(@User('id') userId: number, @Body('article') articleData: CreateArticleDto): Promise<IArticleRO> {
+    return this.articleService.create(userId, articleData);
+  }
     return this.articleService.create(userId, articleData);
   }
 
@@ -49,6 +51,21 @@ export class ArticleController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Put(':slug')
   async update(
+    @User('id') userId: number,
+    @Param('slug') slug: string,
+    @Body('article') articleData: UpdateArticleDto,
+  ): Promise<IArticleRO> {
+    try {
+      return await this.articleService.update(userId, slug, articleData);
+    } catch (error) {
+      if (error.message === 'Article is currently locked by another user.') {
+        throw new ConflictException('Article is currently locked by another user.');
+      }
+      throw error;
+    }
+  }
+
+  @ApiOperation({ summary: 'Delete article' })
     @User('id') user: number,
     @Param() params: Record<string, string>,
     @Body('article') articleData: UpdateArticleDto,
