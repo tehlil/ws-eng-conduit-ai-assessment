@@ -7,7 +7,8 @@ import { User } from '../user/user.entity';
 import { Article } from './article.entity';
 import { IArticleRO, IArticlesRO, ICommentsRO } from './article.interface';
 import { Comment } from './comment.entity';
-import { CreateArticleDto, CreateCommentDto } from './dto';
+import { CreateArticleDto, CreateCommentDto, UpdateArticleDto } from './dto';
+import { Lock } from './lock.entity'; // Assuming a lock entity is created
 
 @Injectable()
 export class ArticleService {
@@ -126,7 +127,12 @@ export class ArticleService {
       article.favoritesCount++;
     }
 
+    if (dto.coAuthors) {
+      const coAuthors = await this.userRepository.find({ id: { $in: dto.coAuthors } });
+      article.coAuthors.add(...coAuthors);
+    }
     await this.em.flush();
+    return { article: article.toJSON(user!) };
     return { article: article.toJSON(user) };
   }
 
@@ -148,7 +154,7 @@ export class ArticleService {
     return { comments: article!.comments.getItems() };
   }
 
-  async create(userId: number, dto: CreateArticleDto) {
+  async create(userId: number, dto: CreateArticleDto): Promise<IArticleRO> {
     const user = await this.userRepository.findOne(
       { id: userId },
       { populate: ['followers', 'favorites', 'articles'] },
@@ -161,7 +167,24 @@ export class ArticleService {
     return { article: article.toJSON(user!) };
   }
 
-  async update(userId: number, slug: string, articleData: Partial<Article>): Promise<IArticleRO> {
+  async update(userId: number, slug: string, articleData: UpdateArticleDto): Promise<IArticleRO> {
+    const lock = await this.em.findOne(Lock, { articleSlug: slug });
+    if (lock && lock.userId !== userId) {
+      throw new Error('Article is currently locked by another user.');
+    }
+    const user = await this.userRepository.findOne(
+      { id: userId },
+      { populate: ['followers', 'favorites', 'articles'] },
+    );
+    const article = await this.articleRepository.findOne({ slug }, { populate: ['author', 'coAuthors'] });
+    wrap(article).assign(articleData);
+    if (articleData.coAuthors) {
+      const coAuthors = await this.userRepository.find({ id: { $in: articleData.coAuthors } });
+      article.coAuthors.set(coAuthors);
+    }
+    await this.em.flush();
+    return { article: article!.toJSON(user!) };
+  }
     const user = await this.userRepository.findOne(
       { id: userId },
       { populate: ['followers', 'favorites', 'articles'] },
