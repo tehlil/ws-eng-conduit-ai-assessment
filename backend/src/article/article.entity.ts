@@ -1,57 +1,136 @@
+// import {
+//   ArrayType,
+//   Collection,
+//   Entity,
+//   EntityDTO,
+//   ManyToOne,
+//   ManyToMany,
+//   OneToMany,
+//   PrimaryKey,
+//   Property,
+//   wrap,
+// } from '@mikro-orm/core';
+// import slug from 'slug';
+// import { User } from '../user/user.entity';
+// import { Comment } from './comment.entity';
+
+// @Entity()
+// export class Article {
+//   @PrimaryKey()
+//   id: number;
+
+//   @Property()
+//   slug: string;
+
+//   @Property()
+//   title: string;
+
+//   @Property()
+//   description = '';
+
+//   @Property()
+//   body = '';
+
+//   @Property({ type: 'date' })
+//   createdAt = new Date();
+
+//   @Property({ type: 'date', onUpdate: () => new Date() })
+//   updatedAt = new Date();
+
+//   @Property({ type: ArrayType })
+//   tagList: string[] = [];
+
+//   @ManyToOne(() => User)
+//   author: User;
+
+//   @ManyToMany(() => User)
+//   coAuthors = new Collection<User>(this);
+
+//   @OneToMany(() => Comment, (comment) => comment.article, { eager: true, orphanRemoval: true })
+//   comments = new Collection<Comment>(this);
+
+//   @Property({ type: 'number' })
+//   favoritesCount = 0;
+
+//   constructor(author: User, title: string, description: string, body: string) {
+//     this.author = author;
+//     this.title = title;
+//     this.description = description;
+//     this.body = body;
+//     this.slug = slug(title, { lower: true }) + '-' + ((Math.random() * Math.pow(36, 6)) | 0).toString(36);
+//   }
+
+//   toJSON(user?: User) {
+//     const o = wrap<Article>(this).toObject() as ArticleDTO;
+//     o.favorited = user && user.favorites.isInitialized() ? user.favorites.contains(this) : false;
+//     o.author = this.author.toJSON(user);
+//     return o;
+//   }
+// }
+
+// export interface ArticleDTO extends EntityDTO<Article> {
+//   favorited?: boolean;
+// }
 import {
   ArrayType,
   Collection,
   Entity,
   EntityDTO,
   ManyToOne,
+  ManyToMany,
   OneToMany,
   PrimaryKey,
   Property,
   wrap,
 } from '@mikro-orm/core';
 import slug from 'slug';
-
-import { Collection, ManyToMany } from '@mikro-orm/core';
 import { User } from '../user/user.entity';
 import { Comment } from './comment.entity';
 
 @Entity()
 export class Article {
-  @PrimaryKey({ type: 'number' })
+  @PrimaryKey()
   id: number;
 
-  @Property({ fieldName: 'slug' })
+  @Property()
   slug: string;
 
-  @Property({ fieldName: 'title' })
+  @Property()
   title: string;
 
-  @Property({ fieldName: 'description' })
+  @Property()
   description = '';
 
-  @Property({ fieldName: 'body' })
+  @Property()
   body = '';
 
-  @Property({ type: 'date', fieldName: 'created_at' })
+  @Property({ type: 'date' })
   createdAt = new Date();
 
-  @Property({ type: 'date', onUpdate: () => new Date(), fieldName: 'updated_at' })
+  @Property({ type: 'date', onUpdate: () => new Date() })
   updatedAt = new Date();
 
-  @Property({ type: ArrayType, fieldName: 'tag_list' })
+  @Property({ type: ArrayType })
   tagList: string[] = [];
 
-  @ManyToOne(() => User, { fieldName: 'author_id' })
+  @ManyToOne(() => User)
   author: User;
 
-  @ManyToMany(() => User, { fieldName: 'co_authors', eager: true })
+  @ManyToMany(() => User)
   coAuthors = new Collection<User>(this);
 
   @OneToMany(() => Comment, (comment) => comment.article, { eager: true, orphanRemoval: true })
   comments = new Collection<Comment>(this);
 
-  @Property({ type: 'number', fieldName: 'favorites_count' })
+  @Property({ type: 'number' })
   favoritesCount = 0;
+
+  // ===== Locking fields =====
+  @Property({ nullable: true })
+  lockedBy?: number; // userId of the user holding the lock
+
+  @Property({ nullable: true, type: 'date' })
+  lockedAt?: Date; // timestamp when lock was acquired
 
   constructor(author: User, title: string, description: string, body: string) {
     this.author = author;
@@ -65,7 +144,6 @@ export class Article {
     const o = wrap<Article>(this).toObject() as ArticleDTO;
     o.favorited = user && user.favorites.isInitialized() ? user.favorites.contains(this) : false;
     o.author = this.author.toJSON(user);
-
     return o;
   }
 }
@@ -73,3 +151,5 @@ export class Article {
 export interface ArticleDTO extends EntityDTO<Article> {
   favorited?: boolean;
 }
+
+

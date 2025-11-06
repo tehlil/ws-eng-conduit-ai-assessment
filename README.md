@@ -90,3 +90,5 @@ Once you are ready, click the link on the Crossover assessment page to reveal th
 - 0:45: Implement the data model changes plus related frontend changes.
 - 1:30: Add the new technical pattern, with the related backend and frontend changes.
 - 0:15: Run the acceptance tests and submit your work.
+
+
